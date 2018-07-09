@@ -55,33 +55,29 @@ struct TestUtils {
         let mockTokenResponse = OIDTokenResponse(
             request: mockTokenRequest,
             parameters: [
-                "access_token": mockAccessToken as NSCopying & NSObjectProtocol,
-                "expires_in": expiresIn as NSCopying & NSObjectProtocol,
-                "token_type": "Bearer" as NSCopying & NSObjectProtocol,
-                "id_token": mockIdToken as NSCopying & NSObjectProtocol,
+                 "access_token": mockAccessToken as NSCopying & NSObjectProtocol,
+                   "expires_in": expiresIn as NSCopying & NSObjectProtocol,
+                   "token_type": "Bearer" as NSCopying & NSObjectProtocol,
+                     "id_token": mockIdToken as NSCopying & NSObjectProtocol,
                 "refresh_token": mockRefreshToken as NSCopying & NSObjectProtocol,
-                "scope": mockScopes as NSCopying & NSObjectProtocol
+                        "scope": mockScopes as NSCopying & NSObjectProtocol
             ]
         )
 
         let tempAuthState = OIDAuthState(authorizationResponse: nil, tokenResponse: mockTokenResponse, registrationResponse: nil)
 
         return Promise<OktaTokenManager>(in: .background, { resolve, reject, _ in
-            do {
-                let tm = try OktaTokenManager(
-                    authState: tempAuthState,
-                    config: [
-                        "issuer": mockIssuer,
+            let tm = OktaTokenManager(
+                authState: tempAuthState,
+                config: [
+                          "issuer": mockIssuer,
                         "clientId": mockClientId,
-                        "clientSecret": mockClientSecret,
-                        "redirectUri": mockRedirectUri
-                    ],
-                    validationOptions: options
-                )
-                return resolve(tm)
-            } catch let error {
-                return reject(error)
-            }
+                    "clientSecret": mockClientSecret,
+                     "redirectUri": mockRedirectUri
+                ],
+                validationOptions: options
+            )
+            return resolve(tm)
         })
     }
 

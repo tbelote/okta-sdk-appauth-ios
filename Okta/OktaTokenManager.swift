@@ -15,8 +15,6 @@ import Vinculum
 
 open class OktaTokenManager: NSObject, NSCoding {
 
-    internal var _idToken: String? = nil
-
     open var authState: OIDAuthState
     open var config: [String: String]
     open var accessibility: CFString
@@ -36,22 +34,21 @@ open class OktaTokenManager: NSObject, NSCoding {
     }
 
     open var idToken: String? {
-        // Return the known idToken via the internal _idToken var
-        // since it gets lost on refresh
+        // Return the known idToken if it hasn't expired
         get {
-            guard let token = self._idToken else { return nil }
-            var returnToken: String?
-            do {
-                let isValid = try isValidToken(idToken: token)
-                if isValid {
-                    returnToken = token
-                }
-            } catch let error {
-                // Capture the error here since we aren't throwing
-                print(error)
-                returnToken = nil
+            guard let tokenResponse = self.authState.lastTokenResponse,
+                  let token = tokenResponse.idToken else {
+                    return nil
             }
-            return returnToken
+
+            do {
+                // Validate the token signature and expiration
+                let _ = try isValidToken(idToken: token)
+                return token
+            } catch let error {
+                print(error)
+                return nil
+            }
         }
     }
 
@@ -63,7 +60,7 @@ open class OktaTokenManager: NSObject, NSCoding {
         }
     }
 
-    public init(authState: OIDAuthState, config: [String: String], accessibility: CFString = kSecAttrAccessibleWhenUnlockedThisDeviceOnly, validationOptions: [String: Any]?) throws {
+    public init(authState: OIDAuthState, config: [String: String], accessibility: CFString = kSecAttrAccessibleWhenUnlockedThisDeviceOnly, validationOptions: [String: Any]?) {
         self.authState = authState
         self.config = config
         self.accessibility = accessibility
@@ -74,47 +71,30 @@ open class OktaTokenManager: NSObject, NSCoding {
         } else {
             // Opinionated validation options
             self.validationOptions = [
-                "issuer": config["issuer"] as Any,
+                  "issuer": config["issuer"] as Any,
                 "audience": config["clientId"] as Any,
-                "exp": true,
-                "iat": true,
-                "nonce": authState.lastTokenResponse?.request.additionalParameters?["nonce"] as Any
+                     "exp": true,
+                     "iat": true
             ] as [String: Any]
         }
 
         super.init()
 
-        // Since the idToken isn't stored in the last tokenResponse after refresh,
-        // refer to the cached keychain version.
-        if let prevIdToken = authState.lastTokenResponse?.idToken {
-            // Validate the token before storing it
-            do {
-                let isValid = try isValidToken(idToken: prevIdToken)
-                if isValid {
-                    self._idToken = prevIdToken
-                    try? Vinculum.set(key: "idToken", value: prevIdToken)
-                }
-            } catch let error {
-                throw error
-            }
-        } else {
-            guard let prevIdToken = try? Vinculum.get("idToken")?.getString() else {
-                self._idToken = nil
-                return
-            }
-            self._idToken = prevIdToken
-        }
-
         // Store the current configuration
         OktaAuth.configuration = config
     }
 
-    required public convenience init?(coder decoder: NSCoder) {
-        try? self.init(
-                    authState: decoder.decodeObject(forKey: "authState") as! OIDAuthState,
-                       config: decoder.decodeObject(forKey: "config") as! [String: String],
-                accessibility: (decoder.decodeObject(forKey: "accessibility") as! CFString),
-            validationOptions: (decoder.decodeObject(forKey: "validationOptions") as! [String: Any])
+    required convenience public init?(coder decoder: NSCoder) {
+        let authState = decoder.decodeObject(forKey: "authState") as! OIDAuthState
+        let config = decoder.decodeObject(forKey: "config") as! [String: String]
+        let accessibility = decoder.decodeObject(forKey: "accessibility") as! CFString
+        let validationOptions = decoder.decodeObject(forKey: "validationOptions") as! [String: Any]
+
+        self.init(
+                    authState: authState,
+                       config: config,
+                accessibility: accessibility,
+            validationOptions: validationOptions
         )
     }
 
@@ -128,14 +108,10 @@ open class OktaTokenManager: NSObject, NSCoding {
     public func isValidToken(idToken: String?) throws -> Bool {
         guard let token = idToken else { return false }
         do {
-            let isValid = try Introspect().validate(jwt: token, options: self.validationOptions)
-            if isValid {
-                return true
-            }
+            return try Introspect().validate(jwt: token, options: self.validationOptions)
         } catch let error {
             throw error
         }
-        return false
     }
 
     public func clear() {

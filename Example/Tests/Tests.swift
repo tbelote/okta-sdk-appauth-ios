@@ -97,7 +97,7 @@ class Tests: XCTestCase {
         .catch { error in
             XCTAssertEqual(
                 error.localizedDescription,
-                "Authorization Error: The operation couldn’t be completed. (org.openid.appauth.general error -6.)"
+                "Authorization Error: invalid_client: The client secret supplied for a confidential client is invalid."
             )
             pwdExpectation.fulfill()
         }
@@ -177,12 +177,10 @@ class Tests: XCTestCase {
 
     func testExpiredIdToken() {
         // Verify an expired token will be caught when validating
-        let expiredExpectation = expectation(description: "Will return an error because JWT is expired")
+        let expiredExpectation = expectation(description: "Will return an undefined token because JWT is expired")
         TestUtils.tokenManager
-        .then { _ in XCTFail() }
-        .catch { error in
-            // We are expecting to fail here
-            XCTAssertEqual(error.localizedDescription, "Could not validate the JWT: The JWT expired and is no longer valid")
+        .then { tokenManager in
+            XCTAssertEqual(tokenManager.idToken, nil)
             expiredExpectation.fulfill()
         }
 
@@ -305,7 +303,7 @@ class Tests: XCTestCase {
         .catch { error in
             XCTAssertEqual(
                 error.localizedDescription,
-                "Authorization Error: The operation couldn’t be completed. (org.openid.appauth.general error -6.)"
+                "Authorization Error: invalid_client: Client authentication failed. Either the client or the client credentials are invalid."
             )
             refreshExpectation.fulfill()
         }

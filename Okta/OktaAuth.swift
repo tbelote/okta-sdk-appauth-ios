@@ -42,15 +42,12 @@ public struct OktaAuthorization {
                     guard let authResponse = authorizationResponse else {
                         return reject(OktaError.APIError("Authorization Error: \(error!.localizedDescription)"))
                     }
-                    do {
-                        let tokenManager = try OktaTokenManager(authState: authResponse, config: config, validationOptions: nil)
 
-                        // Set the local cache and write to storage
-                        self.storeAuthState(tokenManager)
-                        return resolve(tokenManager)
-                    } catch let error {
-                        return reject(error)
-                    }
+                    let tokenManager = OktaTokenManager(authState: authResponse, config: config, validationOptions: nil)
+
+                    // Set the local cache and write to storage
+                    self.storeAuthState(tokenManager)
+                    return resolve(tokenManager)
                 }
             }
             .catch { error in return reject(error) }
@@ -113,15 +110,11 @@ public struct OktaAuthorization {
                              registrationResponse: nil
                         )
 
-                        do {
-                            let tokenManager = try OktaTokenManager(authState: authState, config: config, validationOptions: nil)
+                        let tokenManager = OktaTokenManager(authState: authState, config: config, validationOptions: nil)
 
-                            // Set the local cache and write to storage
-                            self.storeAuthState(tokenManager)
-                            return resolve(tokenManager)
-                        } catch let error {
-                            return reject(error)
-                        }
+                        // Set the local cache and write to storage
+                        self.storeAuthState(tokenManager)
+                        return resolve(tokenManager)
                     }
                 }
             }

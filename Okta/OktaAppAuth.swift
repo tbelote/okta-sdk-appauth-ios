@@ -63,7 +63,7 @@ public func introspect() -> Introspect {
 }
 
 public func refresh() -> Promise<String> {
-    // Refreshes the access token if a refresh token is present
+    // Refreshes the access and/or tokens if a refresh token is present
     return Refresh().refresh()
 }
 
